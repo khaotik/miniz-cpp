@@ -2,7 +2,7 @@
 #include <cassert>
 #include <fstream>
 
-#include <zip_file.hpp>
+#include "zip_file.hpp"
 
 namespace {
 
@@ -41174,18 +41174,15 @@ void test_extractall_path()
     miniz_cpp::zip_file f(existing_file);
 }
 
-void test_extractall_members_name()
-{
+void test_extractall_members_name() {
     miniz_cpp::zip_file f(existing_file);
 }
 
-void test_extractall_members_info()
-{
+void test_extractall_members_info() {
     miniz_cpp::zip_file f(existing_file);
 }
 
-void test_printdir()
-{
+void test_printdir() {
     miniz_cpp::zip_file f(existing_file);
     std::stringstream ss;
     f.printdir(ss);
@@ -41193,21 +41190,18 @@ void test_printdir()
     assert(printed == expected_printdir_string);
 }
 
-void test_read()
-{
+void test_read() {
     miniz_cpp::zip_file f(existing_file);
     assert(f.read("[Content_Types].xml") == expected_content_types_string);
     assert(f.read(f.getinfo("[Content_Types].xml")) == expected_content_types_string);
 }
 
-void test_testzip()
-{
+void test_testzip() {
     miniz_cpp::zip_file f(existing_file);
     assert(f.testzip().first);
 }
 
-void test_write()
-{
+void test_write() {
     remove_temp_file();
     
     miniz_cpp::zip_file f;
@@ -41222,8 +41216,7 @@ void test_write()
     remove_temp_file();
 }
 
-void test_writestr()
-{
+void test_writestr() {
     remove_temp_file();
     
     miniz_cpp::zip_file f;
@@ -41240,8 +41233,7 @@ void test_writestr()
     remove_temp_file();
 }
 
-void test_comment()
-{
+void test_comment() {
     remove_temp_file();
     
     miniz_cpp::zip_file f;
@@ -41254,8 +41246,7 @@ void test_comment()
     remove_temp_file();
 }
 
-void write_existing()
-{
+void write_existing() {
     std::ofstream stream(existing_file, std::ios::binary);
     std::array<char, test_xlsx_len> test_xlsx_chars = {{0}};
     std::copy(test_xlsx, test_xlsx + test_xlsx_len, test_xlsx_chars.begin());
@@ -41264,14 +41255,12 @@ void write_existing()
     stream2 << expected_atxt_string;
 }
 
-void remove_existing()
-{
+void remove_existing() {
     std::remove(existing_file);
     std::remove("a.txt");
 }
 
-void test_zip()
-{
+void test_zip() {
     write_existing();
     test_load_file();
     test_load_stream();
@@ -41299,8 +41288,7 @@ void test_zip()
 
 } // namespace
 
-int main()
-{
+int main() {
     test_zip();
     std::cout << "all tests passed" << std::endl;
     return 0;

@@ -3,24 +3,25 @@ project(miniz-cpp)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(TEST_SOURCE "${PROJECT_SOURCE_DIR}/tests/test.cpp")
+set(MINIZ_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 
-set(TEST_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp)
+option(MINIZ_BUILD_TESTS "build executable for unit tests" ON)
+option(MINIZ_BUILD_EXAMPLES "build executables for examples" ON)
 
-add_executable(miniz-cpp.test ${TEST_SOURCE})
-target_include_directories(miniz-cpp.test
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# === tests
+if(${MINIZ_BUILD_TESTS})
+  add_executable(miniz-cpp.test ${TEST_SOURCE})
+  target_include_directories(miniz-cpp.test PRIVATE "${MINIZ_INCLUDE_DIR}")
+endif()
 
-set(EXAMPLE_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/examples/pipe.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/examples/read.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/examples/write.cpp)
-
-foreach(EXAMPLE_SOURCE IN ITEMS ${EXAMPLE_SOURCES})
-    get_filename_component(EXAMPLE_NAME ${EXAMPLE_SOURCE} NAME_WE)
-    set(EXAMPLE_EXECUTABLE example-${EXAMPLE_NAME})
-
-    add_executable(${EXAMPLE_EXECUTABLE} ${EXAMPLE_SOURCE})
-
-    target_include_directories(${EXAMPLE_EXECUTABLE}
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-endforeach()
+# === examples
+if(${MINIZ_BUILD_EXAMPLES})
+  file(GLOB EXAMPLE_SOURCES "${PROJECT_SOURCE_DIR}/examples/*.cpp")
+  foreach(SRC_PATH IN ITEMS ${EXAMPLE_SOURCES})
+    get_filename_component(SRC_NAME "${SRC_PATH}" NAME_WE)
+    set(EXE_NAME "example-${SRC_NAME}")
+    add_executable(${EXE_NAME} ${SRC_PATH})
+    target_include_directories(${EXE_NAME} PRIVATE "${MINIZ_INCLUDE_DIR}")
+  endforeach()
+endif()
