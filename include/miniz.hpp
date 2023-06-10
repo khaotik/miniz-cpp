@@ -50,40 +50,50 @@ char directory_separator = '/';
 char alt_directory_separator = '\\';
 #endif
 
-std::string join_path(const std::vector<std::string> &parts) {
+std::string static
+join_path(const std::vector<std::string> &parts) {
   std::string joined;
   std::size_t i = 0;
   for(auto part : parts) {
     joined.append(part);
     if(i++ != parts.size() - 1) {
-      joined.append(1, '/'); }
-  }
-  return joined;
-}
+      joined.append(1, '/'); } }
+  return joined; }
+std::string static
+join_path(const std::vector<std::string_view> &parts) {
+  std::string joined;
+  std::size_t i = 0;
+  for(auto part : parts) {
+    joined.append(part);
+    if(i++ != parts.size() - 1) {
+      joined.append(1, '/'); } }
+  return joined; }
 
-std::vector<std::string> split_path(const std::string &path, char delim = directory_separator) {
+std::vector<std::string> static
+split_path(std::string_view &path, char delim = directory_separator) {
   std::vector<std::string> split;
   std::string::size_type previous_index = 0;
   auto separator_index = path.find(delim);
   while(separator_index != std::string::npos) {
     auto part = path.substr(previous_index, separator_index - previous_index);
     if(part != "..") {
-      split.push_back(part);
+      split.push_back(std::string(part));
     } else {
       split.pop_back();
     }
     previous_index = separator_index + 1;
     separator_index = path.find(delim, previous_index);
   }
-  split.push_back(path.substr(previous_index));
+  split.push_back(std::string(path.substr(previous_index)));
   if(split.size() == 1 && delim == directory_separator) {
     auto alternative = split_path(path, alt_directory_separator);
     if(alternative.size() > 1) {
       return alternative; } }
   return split;
 }
-    
-uint32_t crc32buf(std::string_view span) {
+
+uint32_t static
+crc32buf(std::string_view span) {
   static const uint32_t lut[] = { /* CRC polynomial 0xedb88320 */
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
@@ -136,7 +146,7 @@ uint32_t crc32buf(std::string_view span) {
   return ~ret;
 }
 
-tm safe_localtime(const time_t &t) {
+static tm safe_localtime(const time_t &t) {
 #ifdef _WIN32
   tm time;
   localtime_s(&time, &t);
@@ -148,7 +158,8 @@ tm safe_localtime(const time_t &t) {
 #endif
 }
 
-std::size_t write_callback(void *opaque, std::uint64_t file_ofs, const void *pBuf, std::size_t n) {
+std::size_t static
+write_callback(void *opaque, std::uint64_t file_ofs, const void *pBuf, std::size_t n) {
   auto buffer = static_cast<std::vector<char> *>(opaque);
   if(file_ofs + n > buffer->size()) {
     auto new_size = static_cast<std::vector<char>::size_type>(file_ofs + n);
@@ -188,55 +199,39 @@ struct zip_info {
 
 class zip_file {
 public:
-  zip_file() : archive_(new mz_zip_archive()) {
-    reset();
-  }
-  zip_file(const std::string &filename) : zip_file() {
-    load(filename);
-  }
-  zip_file(std::istream &stream) : zip_file() {
-    load(stream);
-  }
-  zip_file(const std::vector<unsigned char> &bytes) : zip_file() {
-    load(bytes);
-  }
-  ~zip_file() {
-    reset();
-  }
-  void load(std::istream &stream) {
+  inline zip_file() : archive_(new mz_zip_archive()) { reset(); }
+  inline zip_file(std::string_view filename) : zip_file() {
+    load(filename); }
+  inline zip_file(std::istream &stream) : zip_file() {
+    load(stream); }
+  inline zip_file(const std::vector<unsigned char> &bytes) : zip_file() {
+    load(bytes); }
+  inline ~zip_file() {
+    reset(); }
+  inline void
+  load(std::istream &stream) {
     reset();
     buffer_.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
     remove_comment();
-    start_read();
-  }
-  void load(const std::string &filename) {
+    start_read(); }
+  inline void
+  load(std::string_view filename) {
     filename_ = filename;
-    std::ifstream stream(filename, std::ios::binary);
-    load(stream);
-  }
-  void load(const std::vector<unsigned char> &bytes) {
+    std::ifstream stream(filename.data(), std::ios::binary);
+    load(stream); }
+  inline void
+  load(const std::vector<unsigned char> &bytes) {
     reset();
     buffer_.assign(bytes.begin(), bytes.end());
     remove_comment();
-    start_read();
-  }
-  void save(const std::string &filename) {
+    start_read(); }
+  void inline
+  save(std::string_view filename) {
     filename_ = filename;
-    std::ofstream stream(filename, std::ios::binary);
-    save(stream);
-  }
-  void save(std::ostream &stream) {
-    if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING) {
-      mz_zip_writer_finalize_archive(archive_.get()); }
-    if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED) {
-      mz_zip_writer_end(archive_.get()); }
-    if(archive_->m_zip_mode == MZ_ZIP_MODE_INVALID) {
-      start_read(); }
-
-    append_comment();
-    stream.write(buffer_.data(), static_cast<long>(buffer_.size()));
-  }
-  void save(std::vector<unsigned char> &bytes) {
+    std::ofstream stream(filename.data(), std::ios::binary);
+    save(stream); }
+  void inline
+  save(std::ostream &stream) {
     if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING) {
       mz_zip_writer_finalize_archive(archive_.get()); }
     if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED) {
@@ -244,9 +239,19 @@ public:
     if(archive_->m_zip_mode == MZ_ZIP_MODE_INVALID) {
       start_read(); }
     append_comment();
-    bytes.assign(buffer_.begin(), buffer_.end());
-  }
-  void reset() {
+    stream.write(buffer_.data(), static_cast<long>(buffer_.size())); }
+  void inline
+  save(std::vector<unsigned char> &bytes) {
+    if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING) {
+      mz_zip_writer_finalize_archive(archive_.get()); }
+    if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED) {
+      mz_zip_writer_end(archive_.get()); }
+    if(archive_->m_zip_mode == MZ_ZIP_MODE_INVALID) {
+      start_read(); }
+    append_comment();
+    bytes.assign(buffer_.begin(), buffer_.end()); }
+  void inline
+  reset() {
     switch(archive_->m_zip_mode) {
       case MZ_ZIP_MODE_READING:
         mz_zip_reader_end(archive_.get());
@@ -259,28 +264,26 @@ public:
         mz_zip_writer_end(archive_.get());
         break;
       case MZ_ZIP_MODE_INVALID:
-        break;
-    }
+        break; }
     if(archive_->m_zip_mode != MZ_ZIP_MODE_INVALID) {
       throw std::runtime_error(""); }
     buffer_.clear();
     comment.clear();
     start_write();
     mz_zip_writer_finalize_archive(archive_.get());
-    mz_zip_writer_end(archive_.get());
-  }
-  bool has_file(std::string_view name) {
+    mz_zip_writer_end(archive_.get()); }
+  bool inline
+  has_file(std::string_view name) {
     if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
-      start_read();
-    }
+      start_read(); }
     int index = mz_zip_reader_locate_file(archive_.get(),
         name.data(), name.size(), nullptr, 0, 0);
-    return index != -1;
-  }
-  bool has_file(const zip_info &name) {
-    return has_file(name.filename);
-  }
-  zip_info getinfo(std::string_view name) {
+    return index != -1; }
+  bool inline
+  has_file(const zip_info &name) {
+    return has_file(name.filename); }
+  zip_info inline
+  getinfo(std::string_view name) {
     if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
       start_read(); }
     int index = mz_zip_reader_locate_file(archive_.get(),
@@ -289,93 +292,79 @@ public:
       throw std::runtime_error("not found"); }
     return getinfo(index);
   }
-
-  std::vector<zip_info> infolist() {
+  std::vector<zip_info> inline
+  infolist() {
     if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
       start_read(); }
     std::vector<zip_info> info;
     for(std::size_t i = 0; i < mz_zip_reader_get_num_files(archive_.get()); i++) {
       info.push_back(getinfo(static_cast<int>(i))); }
-    return info;
-  }
-  std::vector<std::string> namelist() {
+    return info; }
+  std::vector<std::string> inline
+  namelist() {
     std::vector<std::string> names;
     for(auto &info : infolist()) {
-      names.push_back(info.filename);
-    }
-    return names;
-  }
-  std::ostream &open(const std::string &name) {
-    return open(getinfo(name));
-  }
-  std::ostream &open(const zip_info &name) {
+      names.push_back(info.filename); }
+    return names; }
+  inline std::ostream& 
+  open(std::string_view name) {
+    return open(getinfo(name)); }
+  inline std::ostream&
+  open(const zip_info &name) {
     auto data = read(name);
     std::string data_string(data.begin(), data.end());
     open_stream_ << data_string;
-    return open_stream_;
-  }
-  void extract(const std::string &member, const std::string &path) {
+    return open_stream_; }
+  void inline
+  extract(std::string_view member, std::string_view path) {
     std::fstream stream(detail::join_path({path, member}), std::ios::binary | std::ios::out);
-    stream << open(member).rdbuf();
-  }
-  void extract(const zip_info &member, const std::string &path) {
+    stream << open(member).rdbuf(); }
+  void inline
+    extract(const zip_info &member, std::string_view &path) {
     std::fstream stream(detail::join_path({path, member.filename}), std::ios::binary | std::ios::out);
-    stream << open(member).rdbuf();
-  }
-  void extractall(const std::string &path) {
-    extractall(path, infolist());
-  }
-  void extractall(const std::string &path, const std::vector<std::string> &members) {
+    stream << open(member).rdbuf(); }
+  void inline
+  extractall(std::string_view path) {
+    extractall(path, infolist()); }
+  void inline extractall(std::string_view path, const std::vector<std::string> &members) {
     for(auto &member : members) {
-      extract(member, path); }
-  }
-  void extractall(const std::string &path, const std::vector<zip_info> &members) {
+      extract(member, path); } }
+  void inline extractall(std::string_view path, const std::vector<zip_info> &members) {
     for(auto &member : members) {
-      extract(member, path); }
-  }
-  void printdir() {
-    printdir(std::cout);
-  }
-  void printdir(std::ostream &stream) {
-    stream << "  Length " << "  " << "   " << "Date" << "   " << " " << "Time " << "   " << "Name" << std::endl;
+      extract(member, path); } }
+  void inline printdir() {
+    printdir(std::cout); }
+  void inline printdir(std::ostream &stream) {
+    stream << "  Length "<<"  "<<"   "<<"Date"<<"   "<<" "<<"Time "<<"   "<<"Name"<<std::endl;
     stream << "---------  ---------- -----   ----" << std::endl;
-    std::size_t sum_length = 0;
-    std::size_t file_count = 0;
+    std::size_t sum_length = 0, file_count = 0;
     for(auto &member : infolist()) {
       sum_length += member.file_size;
       file_count++;
-
       std::string length_string = std::to_string(member.file_size);
       while(length_string.length() < 9) {
-        length_string = " " + length_string;
-      }
-      stream << length_string;
-
-      stream << "  ";
-      stream << (member.date_time.month < 10 ? "0" : "") << member.date_time.month;
-      stream << "/";
-      stream << (member.date_time.day < 10 ? "0" : "") << member.date_time.day;
-      stream << "/";
-      stream << member.date_time.year;
-      stream << " ";
-      stream << (member.date_time.hours < 10 ? "0" : "") << member.date_time.hours;
-      stream << ":";
-      stream << (member.date_time.minutes < 10 ? "0" : "") << member.date_time.minutes;
-      stream << "   ";
-      stream << member.filename;
-      stream << std::endl;
+        length_string = " " + length_string; }
+      stream << length_string << "  " <<
+        (member.date_time.month < 10 ? "0" : "") << member.date_time.month << "/" <<
+        (member.date_time.day < 10 ? "0" : "") << member.date_time.day << "/" <<
+        member.date_time.year << " " <<
+        (member.date_time.hours < 10 ? "0" : "") << member.date_time.hours << ":" <<
+        (member.date_time.minutes < 10 ? "0" : "") << member.date_time.minutes <<  "   " <<
+        member.filename << std::endl;
     }
-
     stream << "---------                     -------" << std::endl;
 
     std::string length_string = std::to_string(sum_length);
     while(length_string.length() < 9) {
       length_string = " " + length_string; }
-    stream << length_string << "                     " << file_count << " " << (file_count == 1 ? "file" : "files");
-    stream << std::endl;
+    stream <<
+      length_string << "                     " <<
+      file_count << " " <<
+      (file_count == 1 ? "file" : "files") <<
+      std::endl;
   }
-
-  std::string read(const zip_info &info) {
+  std::string inline
+  read(const zip_info &info) {
     std::size_t size;
     char *data = static_cast<char *>(mz_zip_reader_extract_file_to_heap(archive_.get(),
           info.filename.c_str(), info.filename.size(), &size, 0));
@@ -383,77 +372,84 @@ public:
       throw std::runtime_error("file couldn't be read"); }
     std::string extracted(data, data + size);
     mz_free(data);
-    return extracted;
-  }
-  std::string read(const std::string &name) {
+    return extracted; }
+  std::string inline
+  read(std::string_view name) {
     return read(getinfo(name)); }
-  std::pair<bool, std::string> testzip() {
+  std::vector<char> inline
+  read_blob(const zip_info &info) {
+    std::size_t size;
+    char *data = static_cast<char *>(mz_zip_reader_extract_file_to_heap(archive_.get(),
+          info.filename.c_str(), info.filename.size(), &size, 0));
+    if(data == nullptr) {
+      throw std::runtime_error("file couldn't be read"); }
+    std::vector<char> extracted(data, data + size);
+    mz_free(data);
+    return extracted; }
+  std::vector<char> inline
+  read_blob(std::string_view name) {
+    return read_blob(getinfo(name)); }
+  std::pair<bool, std::string> inline
+  testzip() {
     if(archive_->m_zip_mode == MZ_ZIP_MODE_INVALID) {
       throw std::runtime_error("not open"); }
-
     for(auto &file : infolist()) {
       auto content = read(file);
       auto crc = detail::crc32buf(content);
       if(crc != file.crc) {
         return {false, file.filename}; } }
-    return {true, ""};
-  }
-  void write(const std::string &filename) {
+    return {true, ""}; }
+  void inline
+  write(std::string_view filename) {
     auto split = detail::split_path(filename);
     if(split.size() > 1) {
-      split.erase(split.begin());
-    }
+      split.erase(split.begin()); }
     auto arcname = detail::join_path(split);
-    write(filename, arcname);
-  }
-  void write(const std::string &filename, const std::string &arcname) {
-    std::fstream file(filename, std::ios::binary | std::ios::in);
+    write(filename, arcname); }
+  void inline
+  write(std::string_view filename, std::string_view arcname) {
+    std::fstream file(filename.data(), std::ios::binary | std::ios::in);
     std::stringstream ss;
     ss << file.rdbuf();
     std::string bytes = ss.str();
-    writestr(arcname, bytes);
-  }
-  void writestr(const std::string &arcname, std::string_view bytes) {
+    writestr(arcname, bytes); }
+  void inline
+  writestr(std::string_view arcname, std::string_view bytes) {
     if(archive_->m_zip_mode != MZ_ZIP_MODE_WRITING) {
       start_write(); }
-    if(!mz_zip_writer_add_mem(archive_.get(), arcname.c_str(), arcname.size(), bytes.data(), bytes.size(), MZ_BEST_COMPRESSION)) {
-      throw std::runtime_error("write error"); }
-  }
-  void writestr(const zip_info &info, std::string_view bytes) {
+    if(!mz_zip_writer_add_mem(archive_.get(), arcname.data(), arcname.size(), bytes.data(), bytes.size(), MZ_BEST_COMPRESSION)) {
+      throw std::runtime_error("write error"); } }
+  void inline
+  writestr(const zip_info &info, std::string_view bytes) {
     if(info.filename.empty() || info.date_time.year < 1980) {
       throw std::runtime_error("must specify a filename and valid date (year >= 1980"); }
-
     if(archive_->m_zip_mode != MZ_ZIP_MODE_WRITING) {
       start_write(); }
-
     auto crc = detail::crc32buf(bytes);
-
     if(!mz_zip_writer_add_mem_ex(
           archive_.get(),
-          info.filename.c_str(),
+          info.filename.data(),
           info.filename.size(),
           bytes.data(), bytes.size(),
           info.comment.c_str(),
           static_cast<mz_uint16>(info.comment.size()), MZ_BEST_COMPRESSION, 0, crc)) {
-      throw std::runtime_error("write error"); }
-  }
+      throw std::runtime_error("write error"); } }
 
   std::string get_filename() const { return filename_; }
-
   std::string comment;
 
 private:
-  void start_read() {
+  void inline
+  start_read() {
     if(archive_->m_zip_mode == MZ_ZIP_MODE_READING) return;
     if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING) {
       mz_zip_writer_finalize_archive(archive_.get()); }
     if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED) {
       mz_zip_writer_end(archive_.get()); }
     if(!mz_zip_reader_init_mem(archive_.get(), buffer_.data(), buffer_.size(), 0)) {
-      throw std::runtime_error("bad zip"); }
-  }
-
-  void start_write() {
+      throw std::runtime_error("bad zip"); } }
+  void inline
+  start_write() {
     if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING) return;
     switch(archive_->m_zip_mode) {
       case MZ_ZIP_MODE_READING: {
@@ -482,18 +478,16 @@ private:
     archive_->m_pWrite = reinterpret_cast<mz_file_write_func>(&detail::write_callback);
     archive_->m_pIO_opaque = &buffer_;
     if(!mz_zip_writer_init(archive_.get(), 0)) {
-      throw std::runtime_error("bad zip"); }
-  }
-
-  void append_comment() {
+      throw std::runtime_error("bad zip"); } }
+  void inline
+  append_comment() {
     if(!comment.empty()) {
       auto comment_length = std::min(static_cast<uint16_t>(comment.length()), std::numeric_limits<uint16_t>::max());
       buffer_[buffer_.size() - 2] = static_cast<char>(comment_length);
       buffer_[buffer_.size() - 1] = static_cast<char>(comment_length >> 8);
-      std::copy(comment.begin(), comment.end(), std::back_inserter(buffer_)); }
-  }
-
-  void remove_comment() {
+      std::copy(comment.begin(), comment.end(), std::back_inserter(buffer_)); } }
+  void inline
+  remove_comment() {
     if(buffer_.empty()) return;
     std::size_t position = buffer_.size() - 1;
     for(; position >= 3; position--) {
@@ -503,31 +497,25 @@ private:
           && buffer_[position] == '\x06') {
         position = position + 17;
         break; } }
-
     if(position == 3) {
       throw std::runtime_error("didn't find end of central directory signature"); }
-
     uint16_t length = static_cast<uint16_t>(buffer_[position + 1]);
     length = static_cast<uint16_t>(length << 8) + static_cast<uint16_t>(buffer_[position]);
     position += 2;
-
     if(length != 0) {
       comment = std::string(buffer_.data() + position, buffer_.data() + position + length);
       buffer_.resize(buffer_.size() - length);
       buffer_[buffer_.size() - 1] = 0;
-      buffer_[buffer_.size() - 2] = 0; }
-  }
-
-  zip_info getinfo(int index) {
+      buffer_[buffer_.size() - 2] = 0; } }
+  zip_info inline
+  getinfo(int index) {
     if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
       start_read(); }
-
     mz_zip_archive_file_stat stat;
     mz_zip_reader_file_stat(archive_.get(), static_cast<mz_uint>(index), &stat);
-
     zip_info result;
 
-    result.filename = std::string(stat.m_filename, stat.m_filename + std::strlen(stat.m_filename));
+    result.filename = std::string(stat.m_filename);
     result.comment = std::string(stat.m_comment, stat.m_comment + stat.m_comment_size);
     result.compress_size = static_cast<std::size_t>(stat.m_comp_size);
     result.file_size = static_cast<std::size_t>(stat.m_uncomp_size);
@@ -547,10 +535,8 @@ private:
     result.create_version = stat.m_version_made_by;
     result.volume = stat.m_file_index;
     result.create_system = stat.m_method;
-
     return result;
   }
-
   std::unique_ptr<mz_zip_archive> archive_;
   std::vector<char> buffer_;
   std::stringstream open_stream_;
