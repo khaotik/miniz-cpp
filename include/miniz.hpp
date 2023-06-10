@@ -83,9 +83,8 @@ std::vector<std::string> split_path(const std::string &path, char delim = direct
   return split;
 }
     
-uint32_t crc32buf(const char *buf, std::size_t len) {
-  uint32_t ret = 0xFFFFFFFF;
-  uint32_t crc_32_tab[] = { /* CRC polynomial 0xedb88320 */
+uint32_t crc32buf(std::string_view span) {
+  static const uint32_t lut[] = { /* CRC polynomial 0xedb88320 */
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
     0x09b64c2b, 0x7eb17cbd, 0xe7b82d07, 0x90bf1d91, 0x1db71064, 0x6ab020f2,
@@ -130,10 +129,10 @@ uint32_t crc32buf(const char *buf, std::size_t len) {
     0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
     0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
   };
-#define UPDC32(octet,crc) (crc_32_tab[((crc)\
-^ static_cast<uint8_t>(octet)) & 0xff] ^ ((crc) >> 8))
-  for ( ; len; --len, ++buf) {
-    ret = UPDC32(*buf, ret); }
+  auto update32 = [](uint32_t input, uint32_t state) {
+    return lut[((state) ^ static_cast<uint8_t>(input)) & 0xff] ^ ((state) >> 8); };
+  uint32_t ret = 0xFFFFFFFF;
+  for ( uint32_t inp : span) { ret = update32(inp, ret); }
   return ~ret;
 }
 
@@ -391,7 +390,7 @@ public:
 
     for(auto &file : infolist()) {
       auto content = read(file);
-      auto crc = detail::crc32buf(content.c_str(), content.size());
+      auto crc = detail::crc32buf(content);
       if(crc != file.crc) {
         return {false, file.filename}; } }
     return {true, ""};
@@ -409,25 +408,29 @@ public:
     std::stringstream ss;
     ss << file.rdbuf();
     std::string bytes = ss.str();
-
     writestr(arcname, bytes);
   }
-  void writestr(const std::string &arcname, const std::string &bytes) {
+  void writestr(const std::string &arcname, std::string_view bytes) {
     if(archive_->m_zip_mode != MZ_ZIP_MODE_WRITING) {
       start_write(); }
     if(!mz_zip_writer_add_mem(archive_.get(), arcname.c_str(), bytes.data(), bytes.size(), MZ_BEST_COMPRESSION)) {
       throw std::runtime_error("write error"); }
   }
-  void writestr(const zip_info &info, const std::string &bytes) {
+  void writestr(const zip_info &info, std::string_view bytes) {
     if(info.filename.empty() || info.date_time.year < 1980) {
       throw std::runtime_error("must specify a filename and valid date (year >= 1980"); }
 
     if(archive_->m_zip_mode != MZ_ZIP_MODE_WRITING) {
       start_write(); }
 
-    auto crc = detail::crc32buf(bytes.c_str(), bytes.size());
+    auto crc = detail::crc32buf(bytes);
 
-    if(!mz_zip_writer_add_mem_ex(archive_.get(), info.filename.c_str(), bytes.data(), bytes.size(), info.comment.c_str(), static_cast<mz_uint16>(info.comment.size()), MZ_BEST_COMPRESSION, 0, crc)) {
+    if(!mz_zip_writer_add_mem_ex(
+          archive_.get(),
+          info.filename.c_str(),
+          bytes.data(), bytes.size(),
+          info.comment.c_str(),
+          static_cast<mz_uint16>(info.comment.size()), MZ_BEST_COMPRESSION, 0, crc)) {
       throw std::runtime_error("write error"); }
   }
 
