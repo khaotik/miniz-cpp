@@ -269,20 +269,22 @@ public:
     mz_zip_writer_finalize_archive(archive_.get());
     mz_zip_writer_end(archive_.get());
   }
-  bool has_file(const std::string &name) {
+  bool has_file(std::string_view name) {
     if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
       start_read();
     }
-    int index = mz_zip_reader_locate_file(archive_.get(), name.c_str(), nullptr, 0);
+    int index = mz_zip_reader_locate_file(archive_.get(),
+        name.data(), name.size(), nullptr, 0, 0);
     return index != -1;
   }
   bool has_file(const zip_info &name) {
     return has_file(name.filename);
   }
-  zip_info getinfo(const std::string &name) {
+  zip_info getinfo(std::string_view name) {
     if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
       start_read(); }
-    int index = mz_zip_reader_locate_file(archive_.get(), name.c_str(), nullptr, 0);
+    int index = mz_zip_reader_locate_file(archive_.get(),
+        name.data(), name.size(), nullptr, 0, 0);
     if(index == -1) {
       throw std::runtime_error("not found"); }
     return getinfo(index);
@@ -375,7 +377,8 @@ public:
 
   std::string read(const zip_info &info) {
     std::size_t size;
-    char *data = static_cast<char *>(mz_zip_reader_extract_file_to_heap(archive_.get(), info.filename.c_str(), &size, 0));
+    char *data = static_cast<char *>(mz_zip_reader_extract_file_to_heap(archive_.get(),
+          info.filename.c_str(), info.filename.size(), &size, 0));
     if(data == nullptr) {
       throw std::runtime_error("file couldn't be read"); }
     std::string extracted(data, data + size);
@@ -413,7 +416,7 @@ public:
   void writestr(const std::string &arcname, std::string_view bytes) {
     if(archive_->m_zip_mode != MZ_ZIP_MODE_WRITING) {
       start_write(); }
-    if(!mz_zip_writer_add_mem(archive_.get(), arcname.c_str(), bytes.data(), bytes.size(), MZ_BEST_COMPRESSION)) {
+    if(!mz_zip_writer_add_mem(archive_.get(), arcname.c_str(), arcname.size(), bytes.data(), bytes.size(), MZ_BEST_COMPRESSION)) {
       throw std::runtime_error("write error"); }
   }
   void writestr(const zip_info &info, std::string_view bytes) {
@@ -428,6 +431,7 @@ public:
     if(!mz_zip_writer_add_mem_ex(
           archive_.get(),
           info.filename.c_str(),
+          info.filename.size(),
           bytes.data(), bytes.size(),
           info.comment.c_str(),
           static_cast<mz_uint16>(info.comment.size()), MZ_BEST_COMPRESSION, 0, crc)) {

@@ -9,9 +9,22 @@ option(MINIZ_BUILD_TESTS "build executable for unit tests" ON)
 option(MINIZ_BUILD_EXAMPLES "build executables for examples" ON)
 
 # === tests
+
 if(${MINIZ_BUILD_TESTS})
+  set(TMPDIR "${CMAKE_CURRENT_BINARY_DIR}/tmp" CACHE PATH "directory for temp files from custom commands during build")
+  set(TESTDIR "${PROJECT_SOURCE_DIR}/tests")
+  file(MAKE_DIRECTORY "${TMPDIR}")
+  add_custom_command(OUTPUT test.xlsx.o
+    WORKING_DIRECTORY ${TMPDIR}
+    COMMAND ${CMAKE_C_COMPILER}
+      -D__raw_file_path__='"${TESTDIR}/test.xlsx.bin"'
+      "${TESTDIR}/test.xlsx.S"
+      -c -o "${CMAKE_CURRENT_BINARY_DIR}/test.xlsx.o"
+    DEPENDS "${TMPDIR}" "${TESTDIR}/test.xlsx.S"
+    COMMENT "generating resource file test.xlsx.o"
+  )
   file(GLOB TEST_SOURCE "${PROJECT_SOURCE_DIR}/tests/test.cpp")
-  add_executable(miniz-cpp.test ${TEST_SOURCE})
+  add_executable(miniz-cpp.test ${TEST_SOURCE} test.xlsx.o)
   target_include_directories(miniz-cpp.test PRIVATE "${MINIZ_INCLUDE_DIR}")
 endif()
 
