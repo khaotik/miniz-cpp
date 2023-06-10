@@ -814,7 +814,7 @@ mz_uint tdefl_create_comp_flags_from_zip_params(int level, int window_bits, int 
 
 #endif // MINIZ_HEADER_INCLUDED
 
-// ------------------- End of Header: Implementation follows. (If you only want the header, define MINIZ_HEADER_FILE_ONLY.)
+// end of HEADER FILE
 
 #ifndef MINIZ_HEADER_FILE_ONLY
 
@@ -863,8 +863,7 @@ typedef unsigned char mz_validate_uint64[sizeof(mz_uint64)==8 ? 1 : -1];
 
 // ------------------- zlib-style API's
 
-mz_ulong mz_adler32(mz_ulong adler, const unsigned char *ptr, size_t buf_len)
-{
+mz_ulong mz_adler32(mz_ulong adler, const unsigned char *ptr, size_t buf_len) {
   mz_uint32 i, s1 = (mz_uint32)(adler & 0xffff), s2 = (mz_uint32)(adler >> 16); size_t block_len = buf_len % 5552;
   if (!ptr) return MZ_ADLER32_INIT;
   while (buf_len) {
@@ -879,8 +878,7 @@ mz_ulong mz_adler32(mz_ulong adler, const unsigned char *ptr, size_t buf_len)
 }
 
 // Karl Malbrain's compact CRC-32. See "A compact CCITT crc16 and crc32 C implementation that balances processor cache usage against speed": http://www.geocities.com/malbrain/
-mz_ulong mz_crc32(mz_ulong crc, const mz_uint8 *ptr, size_t buf_len)
-{
+mz_ulong mz_crc32(mz_ulong crc, const mz_uint8 *ptr, size_t buf_len) {
   static const mz_uint32 s_crc32[16] = { 0, 0x1db71064, 0x3b6e20c8, 0x26d930ac, 0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
     0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c, 0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c };
   mz_uint32 crcu32 = (mz_uint32)crc;
@@ -889,8 +887,7 @@ mz_ulong mz_crc32(mz_ulong crc, const mz_uint8 *ptr, size_t buf_len)
   return ~crcu32;
 }
 
-void mz_free(void *p)
-{
+void mz_free(void *p) {
   MZ_FREE(p);
 }
 
@@ -900,18 +897,15 @@ static void *def_alloc_func(void *opaque, size_t items, size_t size) { (void)opa
 static void def_free_func(void *opaque, void *address) { (void)opaque, (void)address; MZ_FREE(address); }
 static void *def_realloc_func(void *opaque, void *address, size_t items, size_t size) { (void)opaque, (void)address, (void)items, (void)size; return MZ_REALLOC(address, items * size); }
 
-const char *mz_version(void)
-{
+const char *mz_version(void) {
   return MZ_VERSION;
 }
 
-int mz_deflateInit(mz_streamp pStream, int level)
-{
+int mz_deflateInit(mz_streamp pStream, int level) {
   return mz_deflateInit2(pStream, level, MZ_DEFLATED, MZ_DEFAULT_WINDOW_BITS, 9, MZ_DEFAULT_STRATEGY);
 }
 
-int mz_deflateInit2(mz_streamp pStream, int level, int method, int window_bits, int mem_level, int strategy)
-{
+int mz_deflateInit2(mz_streamp pStream, int level, int method, int window_bits, int mem_level, int strategy) {
   tdefl_compressor *pComp;
   mz_uint comp_flags = TDEFL_COMPUTE_ADLER32 | tdefl_create_comp_flags_from_zip_params(level, window_bits, strategy);
 
@@ -928,13 +922,11 @@ int mz_deflateInit2(mz_streamp pStream, int level, int method, int window_bits, 
   if (!pStream->zfree) pStream->zfree = def_free_func;
 
   pComp = (tdefl_compressor *)pStream->zalloc(pStream->opaque, 1, sizeof(tdefl_compressor));
-  if (!pComp)
-    return MZ_MEM_ERROR;
+  if (!pComp) return MZ_MEM_ERROR;
 
   pStream->state = (struct mz_internal_state *)pComp;
 
-  if (tdefl_init(pComp, NULL, NULL, comp_flags) != TDEFL_STATUS_OKAY)
-  {
+  if (tdefl_init(pComp, NULL, NULL, comp_flags) != TDEFL_STATUS_OKAY) {
     mz_deflateEnd(pStream);
     return MZ_PARAM_ERROR;
   }
@@ -942,55 +934,39 @@ int mz_deflateInit2(mz_streamp pStream, int level, int method, int window_bits, 
   return MZ_OK;
 }
 
-int mz_deflateReset(mz_streamp pStream)
-{
+int mz_deflateReset(mz_streamp pStream) {
   if ((!pStream) || (!pStream->state) || (!pStream->zalloc) || (!pStream->zfree)) return MZ_STREAM_ERROR;
   pStream->total_in = pStream->total_out = 0;
   tdefl_init((tdefl_compressor*)pStream->state, NULL, NULL, ((tdefl_compressor*)pStream->state)->m_flags);
   return MZ_OK;
 }
 
-int mz_deflate(mz_streamp pStream, int flush)
-{
-  size_t in_bytes, out_bytes;
+int mz_deflate(mz_streamp pStream, int flush) { size_t in_bytes, out_bytes;
   mz_ulong orig_total_in, orig_total_out;
   int mz_status = MZ_OK;
-
   if ((!pStream) || (!pStream->state) || (flush < 0) || (flush > MZ_FINISH) || (!pStream->next_out)) return MZ_STREAM_ERROR;
   if (!pStream->avail_out) return MZ_BUF_ERROR;
-
   if (flush == MZ_PARTIAL_FLUSH) flush = MZ_SYNC_FLUSH;
-
   if (((tdefl_compressor*)pStream->state)->m_prev_return_status == TDEFL_STATUS_DONE)
     return (flush == MZ_FINISH) ? MZ_STREAM_END : MZ_BUF_ERROR;
-
   orig_total_in = pStream->total_in; orig_total_out = pStream->total_out;
-  for (;;)
-  {
+  for (;;) {
     tdefl_status defl_status;
     in_bytes = pStream->avail_in; out_bytes = pStream->avail_out;
-
     defl_status = tdefl_compress((tdefl_compressor*)pStream->state, pStream->next_in, &in_bytes, pStream->next_out, &out_bytes, (tdefl_flush)flush);
     pStream->next_in += (mz_uint)in_bytes; pStream->avail_in -= (mz_uint)in_bytes;
     pStream->total_in += (mz_uint)in_bytes; pStream->adler = tdefl_get_adler32((tdefl_compressor*)pStream->state);
-
     pStream->next_out += (mz_uint)out_bytes; pStream->avail_out -= (mz_uint)out_bytes;
     pStream->total_out += (mz_uint)out_bytes;
-
-    if (defl_status < 0)
-    {
+    if (defl_status < 0) {
       mz_status = MZ_STREAM_ERROR;
       break;
-    }
-    else if (defl_status == TDEFL_STATUS_DONE)
-    {
+    } else if (defl_status == TDEFL_STATUS_DONE) {
       mz_status = MZ_STREAM_END;
       break;
-    }
-    else if (!pStream->avail_out)
+    } else if (!pStream->avail_out) {
       break;
-    else if ((!pStream->avail_in) && (flush != MZ_FINISH))
-    {
+    }  else if ((!pStream->avail_in) && (flush != MZ_FINISH)) {
       if ((flush) || (pStream->total_in != orig_total_in) || (pStream->total_out != orig_total_out))
         break;
       return MZ_BUF_ERROR; // Can't make forward progress without some input.
@@ -999,26 +975,22 @@ int mz_deflate(mz_streamp pStream, int flush)
   return mz_status;
 }
 
-int mz_deflateEnd(mz_streamp pStream)
-{
+int mz_deflateEnd(mz_streamp pStream) {
   if (!pStream) return MZ_STREAM_ERROR;
-  if (pStream->state)
-  {
+  if (pStream->state) {
     pStream->zfree(pStream->opaque, pStream->state);
     pStream->state = NULL;
   }
   return MZ_OK;
 }
 
-mz_ulong mz_deflateBound(mz_streamp pStream, mz_ulong source_len)
-{
+mz_ulong mz_deflateBound(mz_streamp pStream, mz_ulong source_len) {
   (void)pStream;
   // This is really over conservative. (And lame, but it's actually pretty tricky to compute a true upper bound given the way tdefl's blocking works.)
   return MZ_MAX(128 + (source_len * 110) / 100, 128 + source_len + ((source_len / (31 * 1024)) + 1) * 5);
 }
 
-int mz_compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len, int level)
-{
+int mz_compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len, int level) {
   int status;
   mz_stream stream;
   memset(&stream, 0, sizeof(stream));
@@ -1035,36 +1007,30 @@ int mz_compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char 
   if (status != MZ_OK) return status;
 
   status = mz_deflate(&stream, MZ_FINISH);
-  if (status != MZ_STREAM_END)
-  {
+  if (status != MZ_STREAM_END) {
     mz_deflateEnd(&stream);
     return (status == MZ_OK) ? MZ_BUF_ERROR : status;
   }
-
   *pDest_len = stream.total_out;
   return mz_deflateEnd(&stream);
 }
 
-int mz_compress(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len)
-{
+int mz_compress(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len) {
   return mz_compress2(pDest, pDest_len, pSource, source_len, MZ_DEFAULT_COMPRESSION);
 }
 
-mz_ulong mz_compressBound(mz_ulong source_len)
-{
+mz_ulong mz_compressBound(mz_ulong source_len) {
   return mz_deflateBound(NULL, source_len);
 }
 
-typedef struct
-{
+typedef struct {
   tinfl_decompressor m_decomp;
   mz_uint m_dict_ofs, m_dict_avail, m_first_call, m_has_flushed; int m_window_bits;
   mz_uint8 m_dict[TINFL_LZ_DICT_SIZE];
   tinfl_status m_last_status;
 } inflate_state;
 
-int mz_inflateInit2(mz_streamp pStream, int window_bits)
-{
+int mz_inflateInit2(mz_streamp pStream, int window_bits) {
   inflate_state *pDecomp;
   if (!pStream) return MZ_STREAM_ERROR;
   if ((window_bits != MZ_DEFAULT_WINDOW_BITS) && (-window_bits != MZ_DEFAULT_WINDOW_BITS)) return MZ_PARAM_ERROR;
@@ -1094,13 +1060,11 @@ int mz_inflateInit2(mz_streamp pStream, int window_bits)
   return MZ_OK;
 }
 
-int mz_inflateInit(mz_streamp pStream)
-{
+int mz_inflateInit(mz_streamp pStream) {
    return mz_inflateInit2(pStream, MZ_DEFAULT_WINDOW_BITS);
 }
 
-int mz_inflate(mz_streamp pStream, int flush)
-{
+int mz_inflate(mz_streamp pStream, int flush) {
   inflate_state* pState;
   mz_uint n, first_call, decomp_flags = TINFL_FLAG_COMPUTE_ADLER32;
   size_t in_bytes, out_bytes, orig_avail_in;
@@ -1190,20 +1154,17 @@ int mz_inflate(mz_streamp pStream, int flush)
   return ((status == TINFL_STATUS_DONE) && (!pState->m_dict_avail)) ? MZ_STREAM_END : MZ_OK;
 }
 
-int mz_inflateEnd(mz_streamp pStream)
-{
+int mz_inflateEnd(mz_streamp pStream) {
   if (!pStream)
     return MZ_STREAM_ERROR;
-  if (pStream->state)
-  {
+  if (pStream->state) {
     pStream->zfree(pStream->opaque, pStream->state);
     pStream->state = NULL;
   }
   return MZ_OK;
 }
 
-int mz_uncompress(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len)
-{
+int mz_uncompress(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len) {
   mz_stream stream;
   int status;
   memset(&stream, 0, sizeof(stream));
@@ -1231,10 +1192,8 @@ int mz_uncompress(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char
   return mz_inflateEnd(&stream);
 }
 
-const char *mz_error(int err)
-{
-  static struct { int m_err; const char *m_pDesc; } s_error_descs[] =
-  {
+const char *mz_error(int err) {
+  static struct { int m_err; const char *m_pDesc; } s_error_descs[] = {
     { MZ_OK, "" }, { MZ_STREAM_END, "stream end" }, { MZ_NEED_DICT, "need dictionary" }, { MZ_ERRNO, "file error" }, { MZ_STREAM_ERROR, "stream error" },
     { MZ_DATA_ERROR, "data error" }, { MZ_MEM_ERROR, "out of memory" }, { MZ_BUF_ERROR, "buf error" }, { MZ_VERSION_ERROR, "version error" }, { MZ_PARAM_ERROR, "parameter error" }
   };
@@ -1319,8 +1278,14 @@ const char *mz_error(int err)
 #pragma warning(disable : 4334)
 #endif
 
-tinfl_status tinfl_decompress(tinfl_decompressor *r, const mz_uint8 *pIn_buf_next, size_t *pIn_buf_size, mz_uint8 *pOut_buf_start, mz_uint8 *pOut_buf_next, size_t *pOut_buf_size, const mz_uint32 decomp_flags)
-{
+tinfl_status tinfl_decompress(
+    tinfl_decompressor *r,
+    const mz_uint8 *pIn_buf_next,
+    size_t *pIn_buf_size,
+    mz_uint8 *pOut_buf_start,
+    mz_uint8 *pOut_buf_next,
+    size_t *pOut_buf_size,
+    const mz_uint32 decomp_flags) {
   static const int s_length_base[31] = { 3,4,5,6,7,8,9,10,11,13, 15,17,19,23,27,31,35,43,51,59, 67,83,99,115,131,163,195,227,258,0,0 };
   static const int s_length_extra[31]= { 0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0 };
   static const int s_dist_base[32] = { 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193, 257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577,0,0};
@@ -1340,124 +1305,91 @@ tinfl_status tinfl_decompress(tinfl_decompressor *r, const mz_uint8 *pIn_buf_nex
   TINFL_CR_BEGIN
 
   bit_buf = num_bits = dist = counter = num_extra = r->m_zhdr0 = r->m_zhdr1 = 0; r->m_z_adler32 = r->m_check_adler32 = 1;
-  if (decomp_flags & TINFL_FLAG_PARSE_ZLIB_HEADER)
-  {
+  if (decomp_flags & TINFL_FLAG_PARSE_ZLIB_HEADER) {
     TINFL_GET_BYTE(1, r->m_zhdr0); TINFL_GET_BYTE(2, r->m_zhdr1);
     counter = (((r->m_zhdr0 * 256 + r->m_zhdr1) % 31 != 0) || (r->m_zhdr1 & 32) || ((r->m_zhdr0 & 15) != 8));
     if (!(decomp_flags & TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF)) counter |= (((1U << (8U + (r->m_zhdr0 >> 4))) > 32768U) || ((out_buf_size_mask + 1) < (size_t)(1U << (8U + (r->m_zhdr0 >> 4)))));
     if (counter) { TINFL_CR_RETURN_FOREVER(36, TINFL_STATUS_FAILED); }
   }
 
-  do
-  {
+  do {
     TINFL_GET_BITS(3, r->m_final, 3); r->m_type = r->m_final >> 1;
-    if (r->m_type == 0)
-    {
+    if (r->m_type == 0) {
       TINFL_SKIP_BITS(5, num_bits & 7);
       for (counter = 0; counter < 4; ++counter) { if (num_bits) TINFL_GET_BITS(6, r->m_raw_header[counter], 8); else TINFL_GET_BYTE(7, r->m_raw_header[counter]); }
       if ((counter = (r->m_raw_header[0] | (r->m_raw_header[1] << 8))) != (mz_uint)(0xFFFF ^ (r->m_raw_header[2] | (r->m_raw_header[3] << 8)))) { TINFL_CR_RETURN_FOREVER(39, TINFL_STATUS_FAILED); }
-      while ((counter) && (num_bits))
-      {
+      while ((counter) && (num_bits)) {
         TINFL_GET_BITS(51, dist, 8);
         while (pOut_buf_cur >= pOut_buf_end) { TINFL_CR_RETURN(52, TINFL_STATUS_HAS_MORE_OUTPUT); }
         *pOut_buf_cur++ = (mz_uint8)dist;
-        counter--;
-      }
-      while (counter)
-      {
+        counter--; }
+      while (counter) {
         size_t n; while (pOut_buf_cur >= pOut_buf_end) { TINFL_CR_RETURN(9, TINFL_STATUS_HAS_MORE_OUTPUT); }
-        while (pIn_buf_cur >= pIn_buf_end)
-        {
-          if (decomp_flags & TINFL_FLAG_HAS_MORE_INPUT)
-          {
+        while (pIn_buf_cur >= pIn_buf_end) {
+          if (decomp_flags & TINFL_FLAG_HAS_MORE_INPUT) {
             TINFL_CR_RETURN(38, TINFL_STATUS_NEEDS_MORE_INPUT);
-          }
-          else
-          {
+          } else {
             TINFL_CR_RETURN_FOREVER(40, TINFL_STATUS_FAILED);
           }
         }
         n = MZ_MIN(MZ_MIN((size_t)(pOut_buf_end - pOut_buf_cur), (size_t)(pIn_buf_end - pIn_buf_cur)), counter);
-        TINFL_MEMCPY(pOut_buf_cur, pIn_buf_cur, n); pIn_buf_cur += n; pOut_buf_cur += n; counter -= (mz_uint)n;
-      }
-    }
-    else if (r->m_type == 3)
-    {
+        TINFL_MEMCPY(pOut_buf_cur, pIn_buf_cur, n); pIn_buf_cur += n; pOut_buf_cur += n; counter -= (mz_uint)n; }
+    } else if (r->m_type == 3) {
       TINFL_CR_RETURN_FOREVER(10, TINFL_STATUS_FAILED);
-    }
-    else
-    {
-      if (r->m_type == 1)
-      {
+    } else {
+      if (r->m_type == 1) {
         mz_uint8 *p = r->m_tables[0].m_code_size; mz_uint i;
         r->m_table_sizes[0] = 288; r->m_table_sizes[1] = 32; TINFL_MEMSET(r->m_tables[1].m_code_size, 5, 32);
         for ( i = 0; i <= 143; ++i) *p++ = 8; for ( ; i <= 255; ++i) *p++ = 9; for ( ; i <= 279; ++i) *p++ = 7; for ( ; i <= 287; ++i) *p++ = 8;
-      }
-      else
-      {
+      } else {
         for (counter = 0; counter < 3; counter++) { TINFL_GET_BITS(11, r->m_table_sizes[counter], "\05\05\04"[counter]); r->m_table_sizes[counter] += s_min_table_sizes[counter]; }
         MZ_CLEAR_OBJ(r->m_tables[2].m_code_size); for (counter = 0; counter < r->m_table_sizes[2]; counter++) { mz_uint s; TINFL_GET_BITS(14, s, 3); r->m_tables[2].m_code_size[s_length_dezigzag[counter]] = (mz_uint8)s; }
         r->m_table_sizes[2] = 19;
       }
-      for ( ; (int)r->m_type >= 0; r->m_type--)
-      {
+      for ( ; (int)r->m_type >= 0; r->m_type--) {
         int tree_next, tree_cur; tinfl_huff_table *pTable;
         mz_uint i, j, used_syms, total, sym_index, next_code[17], total_syms[16]; pTable = &r->m_tables[r->m_type]; MZ_CLEAR_OBJ(total_syms); MZ_CLEAR_OBJ(pTable->m_look_up); MZ_CLEAR_OBJ(pTable->m_tree);
         for (i = 0; i < r->m_table_sizes[r->m_type]; ++i) total_syms[pTable->m_code_size[i]]++;
         used_syms = 0, total = 0; next_code[0] = next_code[1] = 0;
         for (i = 1; i <= 15; ++i) { used_syms += total_syms[i]; next_code[i + 1] = (total = ((total + total_syms[i]) << 1)); }
-        if ((65536 != total) && (used_syms > 1))
-        {
+        if ((65536 != total) && (used_syms > 1)) {
           TINFL_CR_RETURN_FOREVER(35, TINFL_STATUS_FAILED);
         }
-        for (tree_next = -1, sym_index = 0; sym_index < r->m_table_sizes[r->m_type]; ++sym_index)
-        {
+        for (tree_next = -1, sym_index = 0; sym_index < r->m_table_sizes[r->m_type]; ++sym_index) {
           mz_uint rev_code = 0, l, cur_code, code_size = pTable->m_code_size[sym_index]; if (!code_size) continue;
           cur_code = next_code[code_size]++; for (l = code_size; l > 0; l--, cur_code >>= 1) rev_code = (rev_code << 1) | (cur_code & 1);
           if (code_size <= TINFL_FAST_LOOKUP_BITS) { mz_int16 k = (mz_int16)((code_size << 9) | sym_index); while (rev_code < TINFL_FAST_LOOKUP_SIZE) { pTable->m_look_up[rev_code] = k; rev_code += (1 << code_size); } continue; }
           if (0 == (tree_cur = pTable->m_look_up[rev_code & (TINFL_FAST_LOOKUP_SIZE - 1)])) { pTable->m_look_up[rev_code & (TINFL_FAST_LOOKUP_SIZE - 1)] = (mz_int16)tree_next; tree_cur = tree_next; tree_next -= 2; }
           rev_code >>= (TINFL_FAST_LOOKUP_BITS - 1);
-          for (j = code_size; j > (TINFL_FAST_LOOKUP_BITS + 1); j--)
-          {
+          for (j = code_size; j > (TINFL_FAST_LOOKUP_BITS + 1); j--) {
             tree_cur -= ((rev_code >>= 1) & 1);
             if (!pTable->m_tree[-tree_cur - 1]) { pTable->m_tree[-tree_cur - 1] = (mz_int16)tree_next; tree_cur = tree_next; tree_next -= 2; } else tree_cur = pTable->m_tree[-tree_cur - 1];
           }
           tree_cur -= ((rev_code >>= 1) & 1); pTable->m_tree[-tree_cur - 1] = (mz_int16)sym_index;
-        }
-        if (r->m_type == 2)
-        {
-          for (counter = 0; counter < (r->m_table_sizes[0] + r->m_table_sizes[1]); )
-          {
+        } if (r->m_type == 2) {
+          for (counter = 0; counter < (r->m_table_sizes[0] + r->m_table_sizes[1]); ) {
             mz_uint s; TINFL_HUFF_DECODE(16, dist, &r->m_tables[2]); if (dist < 16) { r->m_len_codes[counter++] = (mz_uint8)dist; continue; }
-            if ((dist == 16) && (!counter))
-            {
+            if ((dist == 16) && (!counter)) {
               TINFL_CR_RETURN_FOREVER(17, TINFL_STATUS_FAILED);
             }
             num_extra = "\02\03\07"[dist - 16]; TINFL_GET_BITS(18, s, num_extra); s += "\03\03\013"[dist - 16];
             TINFL_MEMSET(r->m_len_codes + counter, (dist == 16) ? r->m_len_codes[counter - 1] : 0, s); counter += s;
-          }
-          if ((r->m_table_sizes[0] + r->m_table_sizes[1]) != counter)
-          {
+          } if ((r->m_table_sizes[0] + r->m_table_sizes[1]) != counter) {
             TINFL_CR_RETURN_FOREVER(21, TINFL_STATUS_FAILED);
           }
           TINFL_MEMCPY(r->m_tables[0].m_code_size, r->m_len_codes, r->m_table_sizes[0]); TINFL_MEMCPY(r->m_tables[1].m_code_size, r->m_len_codes + r->m_table_sizes[0], r->m_table_sizes[1]);
         }
       }
-      for (;;)
-      {
+      for (;;) {
         mz_uint8 *pSrc;
-        for (;;)
-        {
-          if (((pIn_buf_end - pIn_buf_cur) < 4) || ((pOut_buf_end - pOut_buf_cur) < 2))
-          {
+        for (;;) {
+          if (((pIn_buf_end - pIn_buf_cur) < 4) || ((pOut_buf_end - pOut_buf_cur) < 2)) {
             TINFL_HUFF_DECODE(23, counter, &r->m_tables[0]);
             if (counter >= 256)
               break;
             while (pOut_buf_cur >= pOut_buf_end) { TINFL_CR_RETURN(24, TINFL_STATUS_HAS_MORE_OUTPUT); }
             *pOut_buf_cur++ = (mz_uint8)counter;
-          }
-          else
-          {
+          } else {
             int sym2; mz_uint code_len;
 #if TINFL_USE_64BIT_BITBUF
             if (num_bits < 30) { bit_buf |= (((tinfl_bit_buf_t)MZ_READ_LE32(pIn_buf_cur)) << num_bits); pIn_buf_cur += 4; num_bits += 32; }
@@ -1477,17 +1409,14 @@ tinfl_status tinfl_decompress(tinfl_decompressor *r, const mz_uint8 *pIn_buf_nex
 #if !TINFL_USE_64BIT_BITBUF
             if (num_bits < 15) { bit_buf |= (((tinfl_bit_buf_t)MZ_READ_LE16(pIn_buf_cur)) << num_bits); pIn_buf_cur += 2; num_bits += 16; }
 #endif
-            if ((sym2 = r->m_tables[0].m_look_up[bit_buf & (TINFL_FAST_LOOKUP_SIZE - 1)]) >= 0)
+            if ((sym2 = r->m_tables[0].m_look_up[bit_buf & (TINFL_FAST_LOOKUP_SIZE - 1)]) >= 0) {
               code_len = sym2 >> 9;
-            else
-            {
+            }else {
               code_len = TINFL_FAST_LOOKUP_BITS; do { sym2 = r->m_tables[0].m_tree[~sym2 + ((bit_buf >> code_len++) & 1)]; } while (sym2 < 0);
             }
             bit_buf >>= code_len; num_bits -= code_len;
-
             pOut_buf_cur[0] = (mz_uint8)counter;
-            if (sym2 & 256)
-            {
+            if (sym2 & 256) {
               pOut_buf_cur++;
               counter = sym2;
               break;
@@ -1506,25 +1435,21 @@ tinfl_status tinfl_decompress(tinfl_decompressor *r, const mz_uint8 *pIn_buf_nex
         if (num_extra) { mz_uint extra_bits; TINFL_GET_BITS(27, extra_bits, num_extra); dist += extra_bits; }
 
         dist_from_out_buf_start = pOut_buf_cur - pOut_buf_start;
-        if ((dist > dist_from_out_buf_start) && (decomp_flags & TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF))
-        {
+        if ((dist > dist_from_out_buf_start) && (decomp_flags & TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF)) {
           TINFL_CR_RETURN_FOREVER(37, TINFL_STATUS_FAILED);
         }
 
         pSrc = pOut_buf_start + ((dist_from_out_buf_start - dist) & out_buf_size_mask);
 
-        if ((MZ_MAX(pOut_buf_cur, pSrc) + counter) > pOut_buf_end)
-        {
-          while (counter--)
-          {
+        if ((MZ_MAX(pOut_buf_cur, pSrc) + counter) > pOut_buf_end) {
+          while (counter--) {
             while (pOut_buf_cur >= pOut_buf_end) { TINFL_CR_RETURN(53, TINFL_STATUS_HAS_MORE_OUTPUT); }
             *pOut_buf_cur++ = pOut_buf_start[(dist_from_out_buf_start++ - dist) & out_buf_size_mask];
           }
           continue;
         }
 #if MINIZ_USE_UNALIGNED_LOADS_AND_STORES
-        else if ((counter >= 9) && (counter <= dist))
-        {
+        else if ((counter >= 9) && (counter <= dist)) {
           const mz_uint8 *pSrc_end = pSrc + (counter & ~7);
           do
           {
@@ -1532,28 +1457,21 @@ tinfl_status tinfl_decompress(tinfl_decompressor *r, const mz_uint8 *pIn_buf_nex
             ((mz_uint32 *)pOut_buf_cur)[1] = ((const mz_uint32 *)pSrc)[1];
             pOut_buf_cur += 8;
           } while ((pSrc += 8) < pSrc_end);
-          if ((counter &= 7) < 3)
-          {
-            if (counter)
-            {
+          if ((counter &= 7) < 3) {
+            if (counter) {
               pOut_buf_cur[0] = pSrc[0];
               if (counter > 1)
                 pOut_buf_cur[1] = pSrc[1];
-              pOut_buf_cur += counter;
-            }
-            continue;
-          }
-        }
+              pOut_buf_cur += counter; }
+            continue; } }
 #endif
-        do
-        {
+        do {
           pOut_buf_cur[0] = pSrc[0];
           pOut_buf_cur[1] = pSrc[1];
           pOut_buf_cur[2] = pSrc[2];
           pOut_buf_cur += 3; pSrc += 3;
         } while ((int)(counter -= 3) > 2);
-        if ((int)counter > 0)
-        {
+        if ((int)counter > 0) {
           pOut_buf_cur[0] = pSrc[0];
           if ((int)counter > 1)
             pOut_buf_cur[1] = pSrc[1];
@@ -1562,8 +1480,7 @@ tinfl_status tinfl_decompress(tinfl_decompressor *r, const mz_uint8 *pIn_buf_nex
       }
     }
   } while (!(r->m_final & 1));
-  if (decomp_flags & TINFL_FLAG_PARSE_ZLIB_HEADER)
-  {
+  if (decomp_flags & TINFL_FLAG_PARSE_ZLIB_HEADER) {
     TINFL_SKIP_BITS(32, num_bits & 7); for (counter = 0; counter < 4; ++counter) { mz_uint s; if (num_bits) TINFL_GET_BITS(41, s, 8); else TINFL_GET_BYTE(42, s); r->m_z_adler32 = (r->m_z_adler32 << 8) | s; }
   }
   TINFL_CR_RETURN_FOREVER(34, TINFL_STATUS_DONE);
@@ -1572,14 +1489,11 @@ tinfl_status tinfl_decompress(tinfl_decompressor *r, const mz_uint8 *pIn_buf_nex
 common_exit:
   r->m_num_bits = num_bits; r->m_bit_buf = bit_buf; r->m_dist = dist; r->m_counter = counter; r->m_num_extra = num_extra; r->m_dist_from_out_buf_start = dist_from_out_buf_start;
   *pIn_buf_size = pIn_buf_cur - pIn_buf_next; *pOut_buf_size = pOut_buf_cur - pOut_buf_next;
-  if ((decomp_flags & (TINFL_FLAG_PARSE_ZLIB_HEADER | TINFL_FLAG_COMPUTE_ADLER32)) && (status >= 0))
-  {
+  if ((decomp_flags & (TINFL_FLAG_PARSE_ZLIB_HEADER | TINFL_FLAG_COMPUTE_ADLER32)) && (status >= 0)) {
     const mz_uint8 *ptr = pOut_buf_next; size_t buf_len = *pOut_buf_size;
     mz_uint32 i, s1 = r->m_check_adler32 & 0xffff, s2 = r->m_check_adler32 >> 16; size_t block_len = buf_len % 5552;
-    while (buf_len)
-    {
-      for (i = 0; i + 7 < block_len; i += 8, ptr += 8)
-      {
+    while (buf_len) {
+      for (i = 0; i + 7 < block_len; i += 8, ptr += 8) {
         s1 += ptr[0], s2 += s1; s1 += ptr[1], s2 += s1; s1 += ptr[2], s2 += s1; s1 += ptr[3], s2 += s1;
         s1 += ptr[4], s2 += s1; s1 += ptr[5], s2 += s1; s1 += ptr[6], s2 += s1; s1 += ptr[7], s2 += s1;
       }
@@ -1596,20 +1510,16 @@ common_exit:
 #endif
 
 // Higher level helper functions.
-void *tinfl_decompress_mem_to_heap(const void *pSrc_buf, size_t src_buf_len, size_t *pOut_len, int flags)
-{
+void *tinfl_decompress_mem_to_heap(const void *pSrc_buf, size_t src_buf_len, size_t *pOut_len, int flags) {
   tinfl_decompressor decomp; void *pBuf = NULL, *pNew_buf; size_t src_buf_ofs = 0, out_buf_capacity = 0;
   *pOut_len = 0;
   tinfl_init(&decomp);
-  for (;;)
-  {
+  for (;;) {
     size_t src_buf_size = src_buf_len - src_buf_ofs, dst_buf_size = out_buf_capacity - *pOut_len, new_out_buf_capacity;
     tinfl_status status = tinfl_decompress(&decomp, (const mz_uint8*)pSrc_buf + src_buf_ofs, &src_buf_size, (mz_uint8*)pBuf, pBuf ? (mz_uint8*)pBuf + *pOut_len : NULL, &dst_buf_size,
       (flags & ~TINFL_FLAG_HAS_MORE_INPUT) | TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF);
-    if ((status < 0) || (status == TINFL_STATUS_NEEDS_MORE_INPUT))
-    {
-      MZ_FREE(pBuf); *pOut_len = 0; return NULL;
-    }
+    if ((status < 0) || (status == TINFL_STATUS_NEEDS_MORE_INPUT)) {
+      MZ_FREE(pBuf); *pOut_len = 0; return NULL; }
     src_buf_ofs += src_buf_size;
     *pOut_len += dst_buf_size;
     if (status == TINFL_STATUS_DONE) break;
@@ -4610,546 +4520,3 @@ void *mz_zip_extract_archive_file_to_heap(const char *pZip_filename, const char 
 #endif
 
 #endif // MINIZ_HEADER_FILE_ONLY
-
-/*
-  This is free and unencumbered software released into the public domain.
-
-  Anyone is free to copy, modify, publish, use, compile, sell, or
-  distribute this software, either in source code form or as a compiled
-  binary, for any purpose, commercial or non-commercial, and by any
-  means.
-
-  In jurisdictions that recognize copyright laws, the author or authors
-  of this software dedicate any and all copyright interest in the
-  software to the public domain. We make this dedication for the benefit
-  of the public at large and to the detriment of our heirs and
-  successors. We intend this dedication to be an overt act of
-  relinquishment in perpetuity of all present and future rights to this
-  software under copyright law.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-  IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-  OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-  OTHER DEALINGS IN THE SOFTWARE.
-
-  For more information, please refer to <http://unlicense.org/>
-*/
-
-namespace miniz_cpp {
-namespace detail {
-
-#ifdef _WIN32
-char directory_separator = '\\';
-char alt_directory_separator = '/';
-#else
-char directory_separator = '/';
-char alt_directory_separator = '\\';
-#endif
-
-std::string join_path(const std::vector<std::string> &parts) {
-    std::string joined;
-    std::size_t i = 0;
-    for(auto part : parts) {
-        joined.append(part);
-        if(i++ != parts.size() - 1) {
-            joined.append(1, '/'); }
-    }
-    return joined;
-}
-
-std::vector<std::string> split_path(const std::string &path, char delim = directory_separator) {
-    std::vector<std::string> split;
-    std::string::size_type previous_index = 0;
-    auto separator_index = path.find(delim);
-    while(separator_index != std::string::npos) {
-        auto part = path.substr(previous_index, separator_index - previous_index);
-        if(part != "..") {
-            split.push_back(part);
-        } else {
-            split.pop_back();
-        }
-        previous_index = separator_index + 1;
-        separator_index = path.find(delim, previous_index);
-    }
-    split.push_back(path.substr(previous_index));
-    if(split.size() == 1 && delim == directory_separator) {
-        auto alternative = split_path(path, alt_directory_separator);
-        if(alternative.size() > 1) {
-            return alternative; } }
-    return split;
-}
-    
-uint32_t crc32buf(const char *buf, std::size_t len) {
-    uint32_t oldcrc32 = 0xFFFFFFFF;
-    uint32_t crc_32_tab[] = { /* CRC polynomial 0xedb88320 */
-        0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
-        0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
-        0x09b64c2b, 0x7eb17cbd, 0xe7b82d07, 0x90bf1d91, 0x1db71064, 0x6ab020f2,
-        0xf3b97148, 0x84be41de, 0x1adad47d, 0x6ddde4eb, 0xf4d4b551, 0x83d385c7,
-        0x136c9856, 0x646ba8c0, 0xfd62f97a, 0x8a65c9ec, 0x14015c4f, 0x63066cd9,
-        0xfa0f3d63, 0x8d080df5, 0x3b6e20c8, 0x4c69105e, 0xd56041e4, 0xa2677172,
-        0x3c03e4d1, 0x4b04d447, 0xd20d85fd, 0xa50ab56b, 0x35b5a8fa, 0x42b2986c,
-        0xdbbbc9d6, 0xacbcf940, 0x32d86ce3, 0x45df5c75, 0xdcd60dcf, 0xabd13d59,
-        0x26d930ac, 0x51de003a, 0xc8d75180, 0xbfd06116, 0x21b4f4b5, 0x56b3c423,
-        0xcfba9599, 0xb8bda50f, 0x2802b89e, 0x5f058808, 0xc60cd9b2, 0xb10be924,
-        0x2f6f7c87, 0x58684c11, 0xc1611dab, 0xb6662d3d, 0x76dc4190, 0x01db7106,
-        0x98d220bc, 0xefd5102a, 0x71b18589, 0x06b6b51f, 0x9fbfe4a5, 0xe8b8d433,
-        0x7807c9a2, 0x0f00f934, 0x9609a88e, 0xe10e9818, 0x7f6a0dbb, 0x086d3d2d,
-        0x91646c97, 0xe6635c01, 0x6b6b51f4, 0x1c6c6162, 0x856530d8, 0xf262004e,
-        0x6c0695ed, 0x1b01a57b, 0x8208f4c1, 0xf50fc457, 0x65b0d9c6, 0x12b7e950,
-        0x8bbeb8ea, 0xfcb9887c, 0x62dd1ddf, 0x15da2d49, 0x8cd37cf3, 0xfbd44c65,
-        0x4db26158, 0x3ab551ce, 0xa3bc0074, 0xd4bb30e2, 0x4adfa541, 0x3dd895d7,
-        0xa4d1c46d, 0xd3d6f4fb, 0x4369e96a, 0x346ed9fc, 0xad678846, 0xda60b8d0,
-        0x44042d73, 0x33031de5, 0xaa0a4c5f, 0xdd0d7cc9, 0x5005713c, 0x270241aa,
-        0xbe0b1010, 0xc90c2086, 0x5768b525, 0x206f85b3, 0xb966d409, 0xce61e49f,
-        0x5edef90e, 0x29d9c998, 0xb0d09822, 0xc7d7a8b4, 0x59b33d17, 0x2eb40d81,
-        0xb7bd5c3b, 0xc0ba6cad, 0xedb88320, 0x9abfb3b6, 0x03b6e20c, 0x74b1d29a,
-        0xead54739, 0x9dd277af, 0x04db2615, 0x73dc1683, 0xe3630b12, 0x94643b84,
-        0x0d6d6a3e, 0x7a6a5aa8, 0xe40ecf0b, 0x9309ff9d, 0x0a00ae27, 0x7d079eb1,
-        0xf00f9344, 0x8708a3d2, 0x1e01f268, 0x6906c2fe, 0xf762575d, 0x806567cb,
-        0x196c3671, 0x6e6b06e7, 0xfed41b76, 0x89d32be0, 0x10da7a5a, 0x67dd4acc,
-        0xf9b9df6f, 0x8ebeeff9, 0x17b7be43, 0x60b08ed5, 0xd6d6a3e8, 0xa1d1937e,
-        0x38d8c2c4, 0x4fdff252, 0xd1bb67f1, 0xa6bc5767, 0x3fb506dd, 0x48b2364b,
-        0xd80d2bda, 0xaf0a1b4c, 0x36034af6, 0x41047a60, 0xdf60efc3, 0xa867df55,
-        0x316e8eef, 0x4669be79, 0xcb61b38c, 0xbc66831a, 0x256fd2a0, 0x5268e236,
-        0xcc0c7795, 0xbb0b4703, 0x220216b9, 0x5505262f, 0xc5ba3bbe, 0xb2bd0b28,
-        0x2bb45a92, 0x5cb36a04, 0xc2d7ffa7, 0xb5d0cf31, 0x2cd99e8b, 0x5bdeae1d,
-        0x9b64c2b0, 0xec63f226, 0x756aa39c, 0x026d930a, 0x9c0906a9, 0xeb0e363f,
-        0x72076785, 0x05005713, 0x95bf4a82, 0xe2b87a14, 0x7bb12bae, 0x0cb61b38,
-        0x92d28e9b, 0xe5d5be0d, 0x7cdcefb7, 0x0bdbdf21, 0x86d3d2d4, 0xf1d4e242,
-        0x68ddb3f8, 0x1fda836e, 0x81be16cd, 0xf6b9265b, 0x6fb077e1, 0x18b74777,
-        0x88085ae6, 0xff0f6a70, 0x66063bca, 0x11010b5c, 0x8f659eff, 0xf862ae69,
-        0x616bffd3, 0x166ccf45, 0xa00ae278, 0xd70dd2ee, 0x4e048354, 0x3903b3c2,
-        0xa7672661, 0xd06016f7, 0x4969474d, 0x3e6e77db, 0xaed16a4a, 0xd9d65adc,
-        0x40df0b66, 0x37d83bf0, 0xa9bcae53, 0xdebb9ec5, 0x47b2cf7f, 0x30b5ffe9,
-        0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693,
-        0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
-        0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
-    };
-    
-#define UPDC32(octet,crc) (crc_32_tab[((crc)\
-^ static_cast<uint8_t>(octet)) & 0xff] ^ ((crc) >> 8))
-    for ( ; len; --len, ++buf) {
-        oldcrc32 = UPDC32(*buf, oldcrc32); }
-    
-    return ~oldcrc32;
-}
-
-tm safe_localtime(const time_t &t) {
-#ifdef _WIN32
-    tm time;
-    localtime_s(&time, &t);
-    return time;
-#else
-    tm *time = localtime(&t);
-    assert(time != nullptr);
-    return *time;
-#endif
-}
-
-std::size_t write_callback(void *opaque, std::uint64_t file_ofs, const void *pBuf, std::size_t n) {
-    auto buffer = static_cast<std::vector<char> *>(opaque);
-    if(file_ofs + n > buffer->size()) {
-        auto new_size = static_cast<std::vector<char>::size_type>(file_ofs + n);
-        buffer->resize(new_size); }
-    for(std::size_t i = 0; i < n; i++) {
-        (*buffer)[static_cast<std::size_t>(file_ofs + i)] = (static_cast<const char *>(pBuf))[i]; }
-    return n;
-}
-
-} // namespace detail
-
-struct zip_info {
-  std::string filename;
-  struct {
-    int year = 1980;
-    int month = 0;
-    int day = 0;
-    int hours = 0;
-    int minutes = 0;
-    int seconds = 0;
-  } date_time;
-
-  std::string comment;
-  std::string extra;
-  uint16_t    create_system = 0;
-  uint16_t    create_version = 0;
-  uint16_t    extract_version = 0;
-  uint16_t    flag_bits = 0;
-  std::size_t volume = 0;
-  uint32_t    internal_attr = 0;
-  uint32_t    external_attr = 0;
-  std::size_t header_offset = 0;
-  uint32_t    crc = 0;
-  std::size_t compress_size = 0;
-  std::size_t file_size = 0;
-};
-
-class zip_file {
-public:
-    zip_file() : archive_(new mz_zip_archive()) {
-        reset();
-    }
-    zip_file(const std::string &filename) : zip_file() {
-        load(filename);
-    }
-    zip_file(std::istream &stream) : zip_file() {
-        load(stream);
-    }
-    zip_file(const std::vector<unsigned char> &bytes) : zip_file() {
-        load(bytes);
-    }
-    ~zip_file() {
-        reset();
-    }
-    void load(std::istream &stream) {
-        reset();
-        buffer_.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
-        remove_comment();
-        start_read();
-    }
-    void load(const std::string &filename) {
-        filename_ = filename;
-        std::ifstream stream(filename, std::ios::binary);
-        load(stream);
-    }
-    void load(const std::vector<unsigned char> &bytes) {
-        reset();
-        buffer_.assign(bytes.begin(), bytes.end());
-        remove_comment();
-        start_read();
-    }
-    void save(const std::string &filename) {
-        filename_ = filename;
-        std::ofstream stream(filename, std::ios::binary);
-        save(stream);
-    }
-    void save(std::ostream &stream) {
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING) {
-            mz_zip_writer_finalize_archive(archive_.get()); }
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED) {
-            mz_zip_writer_end(archive_.get()); }
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_INVALID) {
-            start_read(); }
-        
-        append_comment();
-        stream.write(buffer_.data(), static_cast<long>(buffer_.size()));
-    }
-    void save(std::vector<unsigned char> &bytes) {
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING) {
-            mz_zip_writer_finalize_archive(archive_.get()); }
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED) {
-            mz_zip_writer_end(archive_.get()); }
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_INVALID) {
-            start_read(); }
-        append_comment();
-        bytes.assign(buffer_.begin(), buffer_.end());
-    }
-    void reset() {
-        switch(archive_->m_zip_mode) {
-        case MZ_ZIP_MODE_READING:
-            mz_zip_reader_end(archive_.get());
-            break;
-        case MZ_ZIP_MODE_WRITING:
-            mz_zip_writer_finalize_archive(archive_.get());
-            mz_zip_writer_end(archive_.get());
-            break;
-        case MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED:
-            mz_zip_writer_end(archive_.get());
-            break;
-        case MZ_ZIP_MODE_INVALID:
-            break;
-        }
-        if(archive_->m_zip_mode != MZ_ZIP_MODE_INVALID) {
-            throw std::runtime_error(""); }
-        buffer_.clear();
-        comment.clear();
-        start_write();
-        mz_zip_writer_finalize_archive(archive_.get());
-        mz_zip_writer_end(archive_.get());
-    }
-    bool has_file(const std::string &name) {
-        if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
-            start_read();
-        }
-        int index = mz_zip_reader_locate_file(archive_.get(), name.c_str(), nullptr, 0);
-        return index != -1;
-    }
-    bool has_file(const zip_info &name) {
-        return has_file(name.filename);
-    }
-    zip_info getinfo(const std::string &name) {
-        if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
-            start_read(); }
-        int index = mz_zip_reader_locate_file(archive_.get(), name.c_str(), nullptr, 0);
-        if(index == -1) {
-            throw std::runtime_error("not found"); }
-        return getinfo(index);
-    }
-    
-    std::vector<zip_info> infolist() {
-        if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
-            start_read(); }
-        std::vector<zip_info> info;
-        for(std::size_t i = 0; i < mz_zip_reader_get_num_files(archive_.get()); i++) {
-            info.push_back(getinfo(static_cast<int>(i))); }
-        return info;
-    }
-    std::vector<std::string> namelist() {
-        std::vector<std::string> names;
-        for(auto &info : infolist()) {
-            names.push_back(info.filename);
-        }
-        return names;
-    }
-    std::ostream &open(const std::string &name) {
-        return open(getinfo(name));
-    }
-    std::ostream &open(const zip_info &name) {
-        auto data = read(name);
-        std::string data_string(data.begin(), data.end());
-        open_stream_ << data_string;
-        return open_stream_;
-    }
-    void extract(const std::string &member, const std::string &path) {
-        std::fstream stream(detail::join_path({path, member}), std::ios::binary | std::ios::out);
-        stream << open(member).rdbuf();
-    }
-    void extract(const zip_info &member, const std::string &path) {
-        std::fstream stream(detail::join_path({path, member.filename}), std::ios::binary | std::ios::out);
-        stream << open(member).rdbuf();
-    }
-    void extractall(const std::string &path) {
-        extractall(path, infolist());
-    }
-    void extractall(const std::string &path, const std::vector<std::string> &members) {
-        for(auto &member : members) {
-            extract(member, path); }
-    }
-    void extractall(const std::string &path, const std::vector<zip_info> &members) {
-        for(auto &member : members) {
-            extract(member, path); }
-    }
-    void printdir() {
-        printdir(std::cout);
-    }
-    void printdir(std::ostream &stream) {
-        stream << "  Length " << "  " << "   " << "Date" << "   " << " " << "Time " << "   " << "Name" << std::endl;
-        stream << "---------  ---------- -----   ----" << std::endl;
-        std::size_t sum_length = 0;
-        std::size_t file_count = 0;
-        for(auto &member : infolist()) {
-            sum_length += member.file_size;
-            file_count++;
-
-            std::string length_string = std::to_string(member.file_size);
-            while(length_string.length() < 9)
-            {
-                length_string = " " + length_string;
-            }
-            stream << length_string;
-
-            stream << "  ";
-            stream << (member.date_time.month < 10 ? "0" : "") << member.date_time.month;
-            stream << "/";
-            stream << (member.date_time.day < 10 ? "0" : "") << member.date_time.day;
-            stream << "/";
-            stream << member.date_time.year;
-            stream << " ";
-            stream << (member.date_time.hours < 10 ? "0" : "") << member.date_time.hours;
-            stream << ":";
-            stream << (member.date_time.minutes < 10 ? "0" : "") << member.date_time.minutes;
-            stream << "   ";
-            stream << member.filename;
-            stream << std::endl;
-        }
-
-        stream << "---------                     -------" << std::endl;
-
-        std::string length_string = std::to_string(sum_length);
-        while(length_string.length() < 9) {
-            length_string = " " + length_string; }
-        stream << length_string << "                     " << file_count << " " << (file_count == 1 ? "file" : "files");
-        stream << std::endl;
-    }
-
-    std::string read(const zip_info &info) {
-        std::size_t size;
-        char *data = static_cast<char *>(mz_zip_reader_extract_file_to_heap(archive_.get(), info.filename.c_str(), &size, 0));
-        if(data == nullptr) {
-          throw std::runtime_error("file couldn't be read"); }
-        std::string extracted(data, data + size);
-        mz_free(data);
-        return extracted;
-    }
-    std::string read(const std::string &name) {
-        return read(getinfo(name)); }
-    std::pair<bool, std::string> testzip() {
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_INVALID) {
-            throw std::runtime_error("not open"); }
-
-        for(auto &file : infolist()) {
-            auto content = read(file);
-            auto crc = detail::crc32buf(content.c_str(), content.size());
-            if(crc != file.crc) {
-                return {false, file.filename}; } }
-        return {true, ""};
-    }
-    void write(const std::string &filename) {
-        auto split = detail::split_path(filename);
-        if(split.size() > 1) {
-            split.erase(split.begin());
-        }
-        auto arcname = detail::join_path(split);
-        write(filename, arcname);
-    }
-    void write(const std::string &filename, const std::string &arcname) {
-        std::fstream file(filename, std::ios::binary | std::ios::in);
-        std::stringstream ss;
-        ss << file.rdbuf();
-        std::string bytes = ss.str();
-
-        writestr(arcname, bytes);
-    }
-    void writestr(const std::string &arcname, const std::string &bytes) {
-        if(archive_->m_zip_mode != MZ_ZIP_MODE_WRITING) {
-            start_write(); }
-        if(!mz_zip_writer_add_mem(archive_.get(), arcname.c_str(), bytes.data(), bytes.size(), MZ_BEST_COMPRESSION)) {
-            throw std::runtime_error("write error"); }
-    }
-    void writestr(const zip_info &info, const std::string &bytes) {
-        if(info.filename.empty() || info.date_time.year < 1980) {
-            throw std::runtime_error("must specify a filename and valid date (year >= 1980"); }
-        
-        if(archive_->m_zip_mode != MZ_ZIP_MODE_WRITING) {
-            start_write(); }
-        
-        auto crc = detail::crc32buf(bytes.c_str(), bytes.size());
-        
-        if(!mz_zip_writer_add_mem_ex(archive_.get(), info.filename.c_str(), bytes.data(), bytes.size(), info.comment.c_str(), static_cast<mz_uint16>(info.comment.size()), MZ_BEST_COMPRESSION, 0, crc)) {
-            throw std::runtime_error("write error"); }
-    }
-
-    std::string get_filename() const { return filename_; }
-    
-    std::string comment;
-    
-private:
-    void start_read() {
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_READING) return;
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING) {
-            mz_zip_writer_finalize_archive(archive_.get()); }
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED) {
-          mz_zip_writer_end(archive_.get()); }
-        if(!mz_zip_reader_init_mem(archive_.get(), buffer_.data(), buffer_.size(), 0)) {
-            throw std::runtime_error("bad zip"); }
-    }
-
-    void start_write() {
-        if(archive_->m_zip_mode == MZ_ZIP_MODE_WRITING) return;
-        switch(archive_->m_zip_mode) {
-            case MZ_ZIP_MODE_READING: {
-                mz_zip_archive archive_copy;
-                std::memset(&archive_copy, 0, sizeof(mz_zip_archive));
-                std::vector<char> buffer_copy(buffer_.begin(), buffer_.end());
-                if(!mz_zip_reader_init_mem(&archive_copy, buffer_copy.data(), buffer_copy.size(), 0)) {
-                    throw std::runtime_error("bad zip"); }
-                mz_zip_reader_end(archive_.get());
-                archive_->m_pWrite = reinterpret_cast<mz_file_write_func>(&detail::write_callback);
-                archive_->m_pIO_opaque = &buffer_;
-                buffer_ = std::vector<char>();
-                if(!mz_zip_writer_init(archive_.get(), 0)) {
-                    throw std::runtime_error("bad zip"); }
-                for(unsigned int i = 0; i < static_cast<unsigned int>(archive_copy.m_total_files); i++) {
-                    if(!mz_zip_writer_add_from_zip_reader(archive_.get(), &archive_copy, i)) {
-                        throw std::runtime_error("fail"); } }
-                mz_zip_reader_end(&archive_copy);
-                return; }
-            case MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED:
-                mz_zip_writer_end(archive_.get());
-                break;
-            case MZ_ZIP_MODE_INVALID:
-            case MZ_ZIP_MODE_WRITING:
-                break; }
-        archive_->m_pWrite = reinterpret_cast<mz_file_write_func>(&detail::write_callback);
-        archive_->m_pIO_opaque = &buffer_;
-        if(!mz_zip_writer_init(archive_.get(), 0)) {
-            throw std::runtime_error("bad zip"); }
-    }
-
-    void append_comment() {
-        if(!comment.empty()) {
-            auto comment_length = std::min(static_cast<uint16_t>(comment.length()), std::numeric_limits<uint16_t>::max());
-            buffer_[buffer_.size() - 2] = static_cast<char>(comment_length);
-            buffer_[buffer_.size() - 1] = static_cast<char>(comment_length >> 8);
-            std::copy(comment.begin(), comment.end(), std::back_inserter(buffer_)); }
-    }
-
-    void remove_comment() {
-        if(buffer_.empty()) return;
-        std::size_t position = buffer_.size() - 1;
-        for(; position >= 3; position--) {
-            if(buffer_[position - 3] == 'P'
-               && buffer_[position - 2] == 'K'
-               && buffer_[position - 1] == '\x05'
-               && buffer_[position] == '\x06') {
-                position = position + 17;
-                break; } }
-        
-        if(position == 3) {
-            throw std::runtime_error("didn't find end of central directory signature"); }
-        
-        uint16_t length = static_cast<uint16_t>(buffer_[position + 1]);
-        length = static_cast<uint16_t>(length << 8) + static_cast<uint16_t>(buffer_[position]);
-        position += 2;
-        
-        if(length != 0) {
-            comment = std::string(buffer_.data() + position, buffer_.data() + position + length);
-            buffer_.resize(buffer_.size() - length);
-            buffer_[buffer_.size() - 1] = 0;
-            buffer_[buffer_.size() - 2] = 0; }
-    }
-
-    zip_info getinfo(int index) {
-        if(archive_->m_zip_mode != MZ_ZIP_MODE_READING) {
-            start_read(); }
-
-        mz_zip_archive_file_stat stat;
-        mz_zip_reader_file_stat(archive_.get(), static_cast<mz_uint>(index), &stat);
-
-        zip_info result;
-
-        result.filename = std::string(stat.m_filename, stat.m_filename + std::strlen(stat.m_filename));
-        result.comment = std::string(stat.m_comment, stat.m_comment + stat.m_comment_size);
-        result.compress_size = static_cast<std::size_t>(stat.m_comp_size);
-        result.file_size = static_cast<std::size_t>(stat.m_uncomp_size);
-        result.header_offset = static_cast<std::size_t>(stat.m_local_header_ofs);
-        result.crc = stat.m_crc32;
-        auto time = detail::safe_localtime(stat.m_time);
-        result.date_time.year = 1900 + time.tm_year;
-        result.date_time.month = 1 + time.tm_mon;
-        result.date_time.day = time.tm_mday;
-        result.date_time.hours = time.tm_hour;
-        result.date_time.minutes = time.tm_min;
-        result.date_time.seconds = time.tm_sec;
-        result.flag_bits = stat.m_bit_flag;
-        result.internal_attr = stat.m_internal_attr;
-        result.external_attr = stat.m_external_attr;
-        result.extract_version = stat.m_version_needed;
-        result.create_version = stat.m_version_made_by;
-        result.volume = stat.m_file_index;
-        result.create_system = stat.m_method;
-        
-        return result;
-    }
-
-    std::unique_ptr<mz_zip_archive> archive_;
-    std::vector<char> buffer_;
-    std::stringstream open_stream_;
-    std::string filename_;
-};
-
-} // namespace miniz_cpp

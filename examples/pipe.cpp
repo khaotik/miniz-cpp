@@ -11,7 +11,7 @@
 #include <unistd.h> // For fileno, isatty
 #endif
 
-#include <miniz.h>
+#include <miniz.hpp>
 
 namespace {
 
@@ -30,7 +30,7 @@ bool is_tty() {
 // Either 1. Print directory structure of zip file given as filename or piped through stdin
 // or 2. Print contents of file contained in aforementioned zip file
 int main(int argc, char *argv[]) {
-    miniz_cpp::zip_file file;
+    miniz::zip_file file;
     std::vector<std::string> args;
     for(int i = 1; i < argc; i++) {
         args.push_back(argv[i]);

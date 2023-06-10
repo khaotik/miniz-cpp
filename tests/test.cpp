@@ -2,7 +2,7 @@
 #include <cassert>
 #include <fstream>
 
-#include "miniz.h"
+#include "miniz.hpp"
 
 namespace {
 
@@ -41045,7 +41045,7 @@ bool files_equal(const std::string &a, const std::string &b)
 void test_load_file()
 {
     remove_temp_file();
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
     f.save(temp_file);
     assert(files_equal(existing_file, temp_file));
     remove_temp_file();
@@ -41056,7 +41056,7 @@ void test_load_stream()
     remove_temp_file();
     {
         std::ifstream in_stream(existing_file, std::ios::binary);
-        miniz_cpp::zip_file f(in_stream);
+        miniz::zip_file f(in_stream);
         std::ofstream out_stream(temp_file, std::ios::binary);
         f.save(out_stream);
     }
@@ -41068,7 +41068,7 @@ void test_load_bytes()
 {
     remove_temp_file();
     
-    miniz_cpp::zip_file f;
+    miniz::zip_file f;
     std::vector<unsigned char> source_bytes, result_bytes;
     std::ifstream in_stream(existing_file, std::ios::binary);
     while(in_stream)
@@ -41078,7 +41078,7 @@ void test_load_bytes()
     f.load(source_bytes);
     f.save(temp_file);
     
-    miniz_cpp::zip_file f2;
+    miniz::zip_file f2;
     f2.load(temp_file);
     result_bytes = std::vector<unsigned char>();
     f2.save(result_bytes);
@@ -41090,7 +41090,7 @@ void test_load_bytes()
 
 void test_reset()
 {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
     
     assert(!f.namelist().empty());
     
@@ -41119,26 +41119,26 @@ void test_reset()
 
 void test_getinfo()
 {
-    miniz_cpp::zip_file f(existing_file);
-    miniz_cpp::zip_info info = f.getinfo("[Content_Types].xml");
+    miniz::zip_file f(existing_file);
+    miniz::zip_info info = f.getinfo("[Content_Types].xml");
     assert(info.filename == "[Content_Types].xml");
 }
 
 void test_infolist()
 {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
     assert(f.infolist().size() == 12);
 }
 
 void test_namelist()
 {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
     assert(f.namelist().size() == 12);
 }
 
 void test_open_by_name()
 {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
     std::stringstream ss;
     ss << f.open("[Content_Types].xml").rdbuf();
     std::string result = ss.str();
@@ -41147,7 +41147,7 @@ void test_open_by_name()
 
 void test_open_by_info()
 {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
     std::stringstream ss;
     ss << f.open("[Content_Types].xml").rdbuf();
     std::string result = ss.str();
@@ -41156,34 +41156,34 @@ void test_open_by_info()
 
 void test_extract_current_directory()
 {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
 }
 
 void test_extract_path()
 {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
 }
 
 void test_extractall_current_directory()
 {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
 }
 
 void test_extractall_path()
 {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
 }
 
 void test_extractall_members_name() {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
 }
 
 void test_extractall_members_info() {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
 }
 
 void test_printdir() {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
     std::stringstream ss;
     f.printdir(ss);
     std::string printed = ss.str();
@@ -41191,25 +41191,25 @@ void test_printdir() {
 }
 
 void test_read() {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
     assert(f.read("[Content_Types].xml") == expected_content_types_string);
     assert(f.read(f.getinfo("[Content_Types].xml")) == expected_content_types_string);
 }
 
 void test_testzip() {
-    miniz_cpp::zip_file f(existing_file);
+    miniz::zip_file f(existing_file);
     assert(f.testzip().first);
 }
 
 void test_write() {
     remove_temp_file();
     
-    miniz_cpp::zip_file f;
+    miniz::zip_file f;
     f.write("a.txt");
     f.write("a.txt", "b.txt");
     f.save(temp_file);
     
-    miniz_cpp::zip_file f2(temp_file);
+    miniz::zip_file f2(temp_file);
     assert(f2.read("a.txt") == expected_atxt_string);
     assert(f2.read("b.txt") == expected_atxt_string);
     
@@ -41219,14 +41219,14 @@ void test_write() {
 void test_writestr() {
     remove_temp_file();
     
-    miniz_cpp::zip_file f;
+    miniz::zip_file f;
     f.writestr("a.txt", "a\na");
-    miniz_cpp::zip_info info;
+    miniz::zip_info info;
     info.filename = "b.txt";
     f.writestr(info, "b\nb");
     f.save(temp_file);
     
-    miniz_cpp::zip_file f2(temp_file);
+    miniz::zip_file f2(temp_file);
     assert(f2.read("a.txt") == "a\na");
     assert(f2.read(f2.getinfo("b.txt")) == "b\nb");
     
@@ -41236,11 +41236,11 @@ void test_writestr() {
 void test_comment() {
     remove_temp_file();
     
-    miniz_cpp::zip_file f;
+    miniz::zip_file f;
     f.comment = "comment";
     f.save(temp_file);
     
-    miniz_cpp::zip_file f2(temp_file);
+    miniz::zip_file f2(temp_file);
     assert(f2.comment == "comment");
     
     remove_temp_file();
