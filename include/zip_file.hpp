@@ -30,6 +30,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <cstring>
 #include <time.h>
 #include <vector>
 
@@ -4682,7 +4683,7 @@ std::vector<std::string> split_path(const std::string &path, char delim = direct
 }
     
 uint32_t crc32buf(const char *buf, std::size_t len) {
-    constexpr uint32_t oldcrc32 = 0xFFFFFFFF;
+    uint32_t oldcrc32 = 0xFFFFFFFF;
     uint32_t crc_32_tab[] = { /* CRC polynomial 0xedb88320 */
         0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
         0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
@@ -4731,11 +4732,8 @@ uint32_t crc32buf(const char *buf, std::size_t len) {
     
 #define UPDC32(octet,crc) (crc_32_tab[((crc)\
 ^ static_cast<uint8_t>(octet)) & 0xff] ^ ((crc) >> 8))
-    
-    for ( ; len; --len, ++buf)
-    {
-        oldcrc32 = UPDC32(*buf, oldcrc32);
-    }
+    for ( ; len; --len, ++buf) {
+        oldcrc32 = UPDC32(*buf, oldcrc32); }
     
     return ~oldcrc32;
 }
@@ -5060,7 +5058,7 @@ private:
                 if(!mz_zip_reader_init_mem(&archive_copy, buffer_copy.data(), buffer_copy.size(), 0)) {
                     throw std::runtime_error("bad zip"); }
                 mz_zip_reader_end(archive_.get());
-                archive_->m_pWrite = &detail::write_callback;
+                archive_->m_pWrite = reinterpret_cast<mz_file_write_func>(&detail::write_callback);
                 archive_->m_pIO_opaque = &buffer_;
                 buffer_ = std::vector<char>();
                 if(!mz_zip_writer_init(archive_.get(), 0)) {
@@ -5076,7 +5074,7 @@ private:
             case MZ_ZIP_MODE_INVALID:
             case MZ_ZIP_MODE_WRITING:
                 break; }
-        archive_->m_pWrite = &detail::write_callback;
+        archive_->m_pWrite = reinterpret_cast<mz_file_write_func>(&detail::write_callback);
         archive_->m_pIO_opaque = &buffer_;
         if(!mz_zip_writer_init(archive_.get(), 0)) {
             throw std::runtime_error("bad zip"); }
